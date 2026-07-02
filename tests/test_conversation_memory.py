@@ -19,7 +19,7 @@ def test_conversation_id_priority():
 
 
 def test_history_cap():
-    s = SessionStore()
+    s = SessionStore(persist=False)
     for i in range(30):
         s.append_history("c", "user", str(i))
     assert len(s.get_history("c")) <= 12
@@ -27,7 +27,7 @@ def test_history_cap():
 
 def _fresh_agent(monkeypatch, captured):
     agent = LlmAgent(registry=ToolRegistry())
-    agent.sessions = SessionStore()  # 隔离，避免全局单例污染
+    agent.sessions = SessionStore(persist=False)  # 隔离，避免全局单例污染
     monkeypatch.setattr(
         agent.llm, "chat_messages",
         lambda messages, tools=None, temperature=0.3: (

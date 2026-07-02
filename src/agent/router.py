@@ -68,7 +68,8 @@ class Router:
     def _conn_lazy(self):
         if self._conn is None:
             init_db()
-            self._conn = get_connection()
+            # 飞书长连接每条消息一线程，连接需跨线程共享
+            self._conn = get_connection(check_same_thread=False)
         return self._conn
 
     def _context_profile(self) -> ResearchProfile:

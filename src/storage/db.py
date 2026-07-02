@@ -22,12 +22,16 @@ def _resolve_path(sqlite_path: str) -> Path:
     return p
 
 
-def get_connection(sqlite_path: str | None = None) -> sqlite3.Connection:
+def get_connection(
+    sqlite_path: str | None = None, check_same_thread: bool = True
+) -> sqlite3.Connection:
     if sqlite_path is None:
         sqlite_path = get_config().env.sqlite_path
     path = _resolve_path(sqlite_path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(str(path), timeout=30)
+    # check_same_thread=False 供多线程（飞书长连接每消息一线程）共享连接，
+    # 由上层用锁串行化访问。
+    conn = sqlite3.connect(str(path), timeout=30, check_same_thread=check_same_thread)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON;")
     conn.execute("PRAGMA journal_mode = WAL;")

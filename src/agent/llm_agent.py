@@ -53,7 +53,7 @@ class LlmAgent:
     def _conn_factory(self):
         if self._conn is None:
             init_db()
-            self._conn = get_connection()
+            self._conn = get_connection(check_same_thread=False)
         return self._conn
 
     def _context(self, event: HermesEvent) -> ToolContext:

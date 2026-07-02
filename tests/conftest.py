@@ -7,6 +7,11 @@ from src.config import get_config
 
 @pytest.fixture(autouse=True, scope="session")
 def _hermetic_env():
+    # 全局会话存储改为纯内存，避免测试写真实 SQLite
+    import src.agent.session as session_mod
+
+    session_mod._STORE = session_mod.SessionStore(persist=False)
+
     env = get_config().env
     env.llm_api_key = ""
     env.llm_base_url = ""
