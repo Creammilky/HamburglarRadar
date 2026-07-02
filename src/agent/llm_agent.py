@@ -64,22 +64,26 @@ class LlmAgent:
         )
 
     def run(self, event: HermesEvent) -> tuple[str, list[str]]:
-        """返回 (最终中文答复, 调用过的工具名列表)。"""
+        """返回 (最终中文答复, 调用过的工具名列表)。按会话线程注入多轮历史。"""
         ctx = self._context(event)
-        messages = [
-            {"role": "system", "content": _SYSTEM_PROMPT},
-            {"role": "user", "content": event.text},
-        ]
+        conv = event.conversation_id()
+        # 话题内回复带历史；群里直接 @ 是新会话（history 为空）
+        history = self.sessions.get_history(conv)
+        messages = [{"role": "system", "content": _SYSTEM_PROMPT}]
+        messages.extend(history)
+        messages.append({"role": "user", "content": event.text})
+
         used_tools: list[str] = []
         specs = self.registry.specs()
+        final_text = "（无内容）"
 
         for _ in range(_MAX_STEPS):
             msg = self.llm.chat_messages(messages, tools=specs)
             tool_calls = msg.get("tool_calls") or []
             if not tool_calls:
-                return (msg.get("content") or "（无内容）"), used_tools
+                final_text = msg.get("content") or "（无内容）"
+                break
 
-            # 追加 assistant（含 tool_calls）以维持上下文
             messages.append({
                 "role": "assistant",
                 "content": msg.get("content") or "",
@@ -100,8 +104,13 @@ class LlmAgent:
                     "tool_call_id": tc.get("id", ""),
                     "content": result[:6000],
                 })
+        else:
+            # 达到步数上限，收尾总结
+            messages.append({"role": "user", "content": "请基于以上信息用中文给出最终答复。"})
+            final = self.llm.chat_messages(messages)
+            final_text = final.get("content") or "（已达到步数上限）"
 
-        # 达到步数上限，做一次收尾总结
-        messages.append({"role": "user", "content": "请基于以上信息用中文给出最终答复。"})
-        final = self.llm.chat_messages(messages)
-        return (final.get("content") or "（已达到步数上限）"), used_tools
+        # 记录本轮到会话历史（仅保留 user/assistant 文本，供后续多轮引用）
+        self.sessions.append_history(conv, "user", event.text)
+        self.sessions.append_history(conv, "assistant", final_text)
+        return final_text, used_tools

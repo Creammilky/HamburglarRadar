@@ -47,6 +47,9 @@ def _event_to_hermes(data) -> HermesEvent:
         is_group=(message.chat_type == "group"),
         is_mention=len(mentions) > 0,
         timestamp=str(getattr(message, "create_time", "")),
+        thread_id=str(getattr(message, "thread_id", "") or ""),
+        root_id=str(getattr(message, "root_id", "") or ""),
+        parent_id=str(getattr(message, "parent_id", "") or ""),
         raw_json={},
     )
 

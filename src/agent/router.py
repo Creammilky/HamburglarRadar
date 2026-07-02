@@ -118,7 +118,7 @@ class Router:
                 return Reply(card_renderer.simple_card("小麦｜出错了", f"处理失败：{exc}", "red"))
 
         # 其余非确认命令先清除上一条待确认动作
-        self.sessions.set_pending(event.chat_id, None)
+        self.sessions.set_pending(event.conversation_id(), None)
 
         # LLM Agent 主路由（工具调用）；未启用/未配置 LLM 时回退规则路由
         if self.config.env.agent_mode == "llm" and self.llm.chat_enabled:
@@ -155,7 +155,7 @@ class Router:
     def _dispatch(self, intent: CommandIntent, event: HermesEvent) -> Reply:
         # 非确认类命令会取消上一条待确认动作
         if intent.intent != "confirm":
-            self.sessions.set_pending(event.chat_id, None)
+            self.sessions.set_pending(event.conversation_id(), None)
         handlers = {
             "help": lambda: self._help(),
             "daily_digest_now": lambda: self._digest_now(),
@@ -198,7 +198,7 @@ class Router:
             return Reply(card_renderer.simple_card("小麦｜未找到", f"没找到 arXiv 论文：{aid}", "orange"))
         profile = self._context_profile()
         summary = self.summarizer.summarize(paper, profile, self._neutral_score(profile.id))
-        self.sessions.set_last_paper(event.chat_id, paper.arxiv_id_base)
+        self.sessions.set_last_paper(event.conversation_id(), paper.arxiv_id_base)
         return Reply(
             card_renderer.render_paper_card(paper, summary, "小麦｜论文总结"),
             text=summary.one_sentence,
@@ -233,8 +233,8 @@ class Router:
 
     def _collision(self, intent: CommandIntent, event: HermesEvent) -> Reply:
         aid = intent.arxiv_ids[0] if intent.arxiv_ids else None
-        if not aid and self.sessions.get(event.chat_id).last_arxiv_id_base:
-            aid = self.sessions.get(event.chat_id).last_arxiv_id_base
+        if not aid and self.sessions.get(event.conversation_id()).last_arxiv_id_base:
+            aid = self.sessions.get(event.conversation_id()).last_arxiv_id_base
         if not aid:
             return Reply(card_renderer.simple_card("小麦｜撞车检查", "请带上 arXiv 链接，或先让我总结一篇。", "orange"))
         paper = self._fetch_one(aid)
@@ -267,7 +267,7 @@ class Router:
                 f"[abs]({paper.abs_url})",
             ]
         )
-        self.sessions.set_last_paper(event.chat_id, paper.arxiv_id_base)
+        self.sessions.set_last_paper(event.conversation_id(), paper.arxiv_id_base)
         return Reply(card_renderer.simple_card("小麦｜撞车检查", body, "purple"), text=f"撞车风险：{risk}")
 
     def _feedback(self, intent: CommandIntent, event: HermesEvent) -> Reply:
@@ -275,7 +275,7 @@ class Router:
         if intent.arxiv_ids:
             aid_base, _ = split_arxiv_id(intent.arxiv_ids[0])
         else:
-            aid_base = self.sessions.get(event.chat_id).last_arxiv_id_base
+            aid_base = self.sessions.get(event.conversation_id()).last_arxiv_id_base
         if not aid_base:
             return Reply(
                 card_renderer.simple_card("小麦｜反馈", "请指明是哪篇（带 arXiv 链接，或先让我总结一篇）。", "orange")
@@ -307,13 +307,13 @@ class Router:
         )
 
     def _save(self, intent: CommandIntent, event: HermesEvent) -> Reply:
-        aid = intent.arxiv_ids[0] if intent.arxiv_ids else self.sessions.get(event.chat_id).last_arxiv_id_base
+        aid = intent.arxiv_ids[0] if intent.arxiv_ids else self.sessions.get(event.conversation_id()).last_arxiv_id_base
         if not aid:
             return Reply(card_renderer.simple_card("小麦｜保存", "请带上 arXiv 链接，或先让我总结一篇。", "orange"))
         # 写库属高风险，若配置要求确认则先请求二次确认
         need_confirm = "write_base" in self.config.safety.require_confirmation_for
         if need_confirm:
-            self.sessions.set_pending(event.chat_id, {"action": "save_paper", "arxiv_ids": [aid]})
+            self.sessions.set_pending(event.conversation_id(), {"action": "save_paper", "arxiv_ids": [aid]})
             return Reply(
                 card_renderer.simple_card(
                     "小麦｜请确认保存",
@@ -328,7 +328,7 @@ class Router:
         )
 
     def _confirm(self, event: HermesEvent) -> Reply:
-        pending = self.sessions.pop_pending(event.chat_id)
+        pending = self.sessions.pop_pending(event.conversation_id())
         if not pending:
             return Reply(
                 card_renderer.simple_card("小麦｜确认", "当前没有待确认的操作。", "orange"),
@@ -360,7 +360,7 @@ class Router:
             paper_id, summary, summary_type="abstract",
             language=self.config.app.language, model_name=self.summarizer.model_name,
         )
-        self.sessions.set_last_paper(event.chat_id, paper.arxiv_id_base)
+        self.sessions.set_last_paper(event.conversation_id(), paper.arxiv_id_base)
         base_msg = self._save_to_base(paper, summary, score, profile.name, event, confirmed)
         return f"✅ {paper.arxiv_id_base} {paper.title[:50]} —— 已存本地；{base_msg}"
 

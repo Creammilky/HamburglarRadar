@@ -46,6 +46,9 @@ class ToolContext:
     llm: LlmClient
     conn_factory: Callable[[], object]  # () -> sqlite3.Connection
 
+    def conv_id(self) -> str:
+        return self.event.conversation_id()
+
     def profile(self) -> ResearchProfile:
         for p in self.config.profiles:
             if p.enabled:
@@ -131,7 +134,7 @@ def _tool_summarize(args: dict, ctx: ToolContext) -> str:
     paper = papers[0]
     profile = ctx.profile()
     summary = ctx.summarizer.summarize(paper, profile, _neutral_score(profile.id))
-    ctx.sessions.set_last_paper(ctx.event.chat_id, paper.arxiv_id_base)
+    ctx.sessions.set_last_paper(ctx.conv_id(), paper.arxiv_id_base)
     return json.dumps({
         "arxiv_id": paper.arxiv_id_base,
         "title": paper.title,
@@ -157,7 +160,7 @@ def _tool_collision(args: dict, ctx: ToolContext) -> str:
     if not papers:
         return f"未找到 arXiv 论文：{aid}"
     paper = papers[0]
-    ctx.sessions.set_last_paper(ctx.event.chat_id, paper.arxiv_id_base)
+    ctx.sessions.set_last_paper(ctx.conv_id(), paper.arxiv_id_base)
     if not ctx.llm.chat_enabled:
         return "撞车检查需要 LLM。"
     profile = ctx.profile()
@@ -186,19 +189,19 @@ def _tool_daily_digest(args: dict, ctx: ToolContext) -> str:
 
 def _tool_request_save(args: dict, ctx: ToolContext) -> str:
     aid = str(args.get("arxiv_id", "")).strip() or (
-        ctx.sessions.get(ctx.event.chat_id).last_arxiv_id_base or ""
+        ctx.sessions.get(ctx.conv_id()).last_arxiv_id_base or ""
     )
     if not aid:
         return "没有可保存的论文（请先指明 arXiv 链接或先总结一篇）。"
     base, _ = split_arxiv_id(aid)
-    pending = ctx.sessions.get(ctx.event.chat_id).pending_action
+    pending = ctx.sessions.get(ctx.conv_id()).pending_action
     if pending and pending.get("action") == "save_paper":
         ids = list(pending.get("arxiv_ids", []))
     else:
         ids = []
     if base not in ids:
         ids.append(base)
-    ctx.sessions.set_pending(ctx.event.chat_id, {"action": "save_paper", "arxiv_ids": ids})
+    ctx.sessions.set_pending(ctx.conv_id(), {"action": "save_paper", "arxiv_ids": ids})
     return (
         f"已登记待保存：{base}（当前共 {len(ids)} 篇待确认）。这是写操作，需要用户二次确认——"
         f"请在回复中提示用户发送「确认」以写入论文库。"
@@ -212,7 +215,7 @@ def _tool_feedback(args: dict, ctx: ToolContext) -> str:
     if aid:
         base, _ = split_arxiv_id(aid)
     else:
-        base = ctx.sessions.get(ctx.event.chat_id).last_arxiv_id_base
+        base = ctx.sessions.get(ctx.conv_id()).last_arxiv_id_base
     if not base:
         return "缺少论文引用（arxiv_id 或先处理过一篇）。"
     conn = ctx.conn_factory()

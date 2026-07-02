@@ -30,7 +30,20 @@ class HermesEvent(BaseModel):
     is_group: bool
     is_mention: bool
     timestamp: str
+    # 飞书会话线程信息：话题内消息带 thread_id；引用回复带 root_id/parent_id
+    thread_id: str = ""
+    root_id: str = ""
+    parent_id: str = ""
     raw_json: dict = Field(default_factory=dict)
+
+    def conversation_id(self) -> str:
+        """会话键：话题内回复共享同一会话（带历史）；群里直接 @ 则每条为新会话。
+
+        - 话题(thread)：thread_id
+        - 引用回复：root_id（指向线程根消息；根消息本身用其 message_id，二者一致 → 串起来）
+        - 直接 @（无线程）：message_id（每条唯一 = 新会话）
+        """
+        return self.thread_id or self.root_id or self.message_id
 
 
 def parse_hermes_event(raw: dict) -> HermesEvent:
@@ -44,6 +57,9 @@ def parse_hermes_event(raw: dict) -> HermesEvent:
         is_group=bool(raw.get("is_group", False)),
         is_mention=bool(raw.get("is_mention", raw.get("mentioned", False))),
         timestamp=str(raw.get("timestamp", "")),
+        thread_id=str(raw.get("thread_id", "") or ""),
+        root_id=str(raw.get("root_id", "") or ""),
+        parent_id=str(raw.get("parent_id", "") or ""),
         raw_json=raw,
     )
 
@@ -77,6 +93,9 @@ def parse_feishu_event(raw: dict) -> HermesEvent:
         is_group=(chat_type == "group"),
         is_mention=len(mentions) > 0,
         timestamp=str(header.get("create_time", "")),
+        thread_id=str(message.get("thread_id", "") or ""),
+        root_id=str(message.get("root_id", "") or ""),
+        parent_id=str(message.get("parent_id", "") or ""),
         raw_json=raw,
     )
 
