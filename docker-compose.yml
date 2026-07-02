@@ -1,14 +1,19 @@
 services:
-  # 飞书群聊长连接交互服务（@ 机器人查/总结论文等）
+  # 飞书群聊长连接交互服务（@ 机器人查/总结论文等）。仅出网连飞书，无需开放端口。
   agent:
     build: .
+    container_name: hamburglar-agent
     env_file: .env
     volumes:
       - ./data:/app/data
     restart: unless-stopped
+    labels:
+      # 由 scheduler(ofelia) 调度：每天 00:30 UTC == 新加坡 08:30 在本容器内发晨报
+      ofelia.enabled: "true"
+      ofelia.job-exec.daily-digest.schedule: "0 30 0 * * *"
+      ofelia.job-exec.daily-digest.command: "python -m src.scheduler.daily_digest_job --send"
 
-  # 每日晨报定时作业（新加坡时间 08:30 == 00:30 UTC）。
-  # 用 ofelia 作轻量容器内 cron 调度，避免依赖宿主 crontab。
+  # 轻量容器内 cron 调度器（在 agent 容器里 exec 晨报命令，复用其 .env 与卷）
   scheduler:
     image: mcuadros/ofelia:latest
     depends_on:
@@ -16,8 +21,4 @@ services:
     command: daemon --docker
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
-    labels:
-      ofelia.job-run.digest.schedule: "0 30 0 * * *"
-      ofelia.job-run.digest.image: "hamburglarradar-agent"
-      ofelia.job-run.digest.command: "python -m src.scheduler.daily_digest_job --send"
     restart: unless-stopped
