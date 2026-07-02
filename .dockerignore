@@ -1,0 +1,13 @@
+.venv/
+.git/
+.gitignore
+data/
+__pycache__/
+*.pyc
+.env
+tests/
+*.egg-info/
+.pytest_cache/
+.cursor/
+.vscode/
+*.pdf

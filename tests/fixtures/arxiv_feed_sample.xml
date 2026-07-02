@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xmlns:arxiv="http://arxiv.org/schemas/atom">
+  <entry>
+    <id>http://arxiv.org/abs/2607.01234v1</id>
+    <updated>2026-07-01T12:00:00Z</updated>
+    <published>2026-07-01T12:00:00Z</published>
+    <title>LLM Agents for Automated Cyber Range Generation and Penetration Testing</title>
+    <summary>We present an autonomous LLM agent that builds cyber range scenarios and performs
+      penetration testing using tool use and MITRE ATT&amp;CK mapping. We introduce a
+      security benchmark and evaluate red teaming capabilities.</summary>
+    <author><name>Alice Example</name></author>
+    <author><name>Bob Example</name></author>
+    <arxiv:primary_category term="cs.CR" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.CR" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <link href="http://arxiv.org/abs/2607.01234v1" rel="alternate" type="text/html"/>
+    <link title="pdf" href="http://arxiv.org/pdf/2607.01234v1" rel="related" type="application/pdf"/>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2607.05678v2</id>
+    <updated>2026-07-01T09:00:00Z</updated>
+    <published>2026-06-30T09:00:00Z</published>
+    <title>Vehicle Routing with Blockchain Trading for Wireless Sensor Networks</title>
+    <summary>This paper studies vehicle routing and cryptocurrency price prediction over
+      wireless sensor networks, unrelated to security agents.</summary>
+    <author><name>Carol Example</name></author>
+    <arxiv:primary_category term="cs.NI" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.NI" scheme="http://arxiv.org/schemas/atom"/>
+    <link href="http://arxiv.org/abs/2607.05678v2" rel="alternate" type="text/html"/>
+    <link title="pdf" href="http://arxiv.org/pdf/2607.05678v2" rel="related" type="application/pdf"/>
+  </entry>
+</feed>

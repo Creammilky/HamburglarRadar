@@ -1,0 +1,17 @@
+"""测试隔离：强制禁用外部 LLM / embedding / webhook，保证单测无网络副作用与费用。"""
+
+import pytest
+
+from src.config import get_config
+
+
+@pytest.fixture(autouse=True, scope="session")
+def _hermetic_env():
+    env = get_config().env
+    env.llm_api_key = ""
+    env.llm_base_url = ""
+    env.llm_chat_model = ""
+    env.llm_embedding_model = ""
+    env.local_embedding_model = ""
+    env.feishu_webhook_url = ""
+    yield

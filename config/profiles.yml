@@ -1,0 +1,48 @@
+profiles:
+  - id: "llm_security_range"
+    name: "LLM 安全靶场 / Agent 评测"
+    enabled: true
+    arxiv_categories:
+      - "cs.AI"
+      - "cs.CL"
+      - "cs.CR"
+      - "cs.SE"
+      - "cs.LG"
+    semantic_query: >
+      LLM agents for cybersecurity, offensive and defensive security automation,
+      cyber range generation, penetration testing agents, autonomous red teaming and
+      blue teaming, CTF-solving agents, MITRE ATT&CK extraction and attack path planning,
+      prompt injection and jailbreak evaluation, LLM and agent security benchmarks,
+      AI safety evaluation, vulnerability detection and exploitation with LLMs,
+      malware analysis automation, tool-use and web agents, agent evaluation benchmarks.
+    positive_keywords:
+      - "cyber range"
+      - "penetration testing"
+      - "pentest"
+      - "red teaming"
+      - "blue team"
+      - "MITRE ATT&CK"
+      - "attack graph"
+      - "attack path"
+      - "CTF"
+      - "security benchmark"
+      - "security evaluation"
+      - "LLM agent"
+      - "autonomous agent"
+      - "tool-use"
+      - "prompt injection"
+      - "jailbreak"
+      - "adversarial"
+      - "vulnerability detection"
+      - "exploit"
+      - "malware"
+      - "threat intelligence"
+      - "AI safety"
+      - "agent security"
+    negative_keywords:
+      - "blockchain trading"
+      - "cryptocurrency price"
+      - "wireless sensor"
+      - "vehicle routing"
+    min_final_score: 0.55
+    top_k: 8

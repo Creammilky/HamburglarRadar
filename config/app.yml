@@ -1,0 +1,53 @@
+app:
+  name: "arxiv-feishu-research-agent"
+  timezone: "Asia/Singapore"
+  daily_digest_time: "08:30"
+  digest_lookback_hours: 24
+  fetch_lookback_hours: 30
+  max_papers_per_profile: 8
+  max_total_papers_per_digest: 20
+  language: "zh-CN"
+
+gateway:
+  mode: "hermes"
+  group_reply_requires_mention: true
+  # 留空 = 允许机器人所在的任意群/任意用户（应用成员本身即为门槛）。
+  # 需收紧时填入具体 chat_id / open_id，或用 .env 的 FEISHU_ALLOWED_CHAT_IDS/USER_IDS。
+  allowed_chat_ids: []
+  allowed_user_ids: []
+
+feishu:
+  sender: "hermes"
+  lark_cli_enabled: true
+  default_output:
+    send_group_card: true
+    save_digest_to_doc: false
+    save_selected_to_base: true
+
+ranking:
+  keyword_weight: 0.15
+  semantic_weight: 0.55
+  llm_judge_weight: 0.30
+  min_final_score: 0.62
+  # 以下阈值按 bge-small-en-v1.5 校准（该模型 cosine 普遍偏高：相关 ~0.8-0.9，无关 ~0.4-0.5）
+  min_semantic_score: 0.45
+  semantic_reject_below: 0.42
+  semantic_low_below: 0.55
+  semantic_medium_below: 0.66
+
+summary:
+  abstract_only_by_default: true
+  pdf_deep_summary_threshold: 0.78
+  max_summary_tokens_per_paper: 700
+
+safety:
+  dry_run: false
+  require_confirmation_for:
+    - "write_doc"
+    - "write_base"
+    - "create_task"
+    - "send_external_message"
+  shell_command_allowlist:
+    - "lark"
+  block_raw_shell: true
+  audit_all_tool_calls: true
