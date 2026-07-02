@@ -189,6 +189,14 @@ def render_card(reports: list[DigestReport], date_str: str) -> dict:
 # ---- 交互命令回复卡片（Milestone 3） ----
 
 
+def plain_card(body_md: str) -> dict:
+    """无标题的纯内容卡片（用于 Agent 对话回复，避免每条都挂标题）。"""
+    return {
+        "config": {"wide_screen_mode": True},
+        "elements": [{"tag": "div", "text": {"tag": "lark_md", "content": body_md}}],
+    }
+
+
 def simple_card(header_title: str, body_md: str, template: str = "blue") -> dict:
     return {
         "config": {"wide_screen_mode": True},

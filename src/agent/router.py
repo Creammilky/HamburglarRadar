@@ -143,7 +143,7 @@ class Router:
             logger.exception("Agent 执行失败")
             return Reply(card_renderer.simple_card("小麦｜出错了", f"处理失败：{exc}", "red"))
         footer = f"\n\n`工具: {', '.join(used)}`" if used else ""
-        return Reply(card_renderer.simple_card("小麦", text + footer), text=text)
+        return Reply(card_renderer.plain_card(text + footer), text=text)
 
     def handle(self, event: HermesEvent) -> Optional[Reply]:
         """路由并发送回复。返回 Reply（None 表示忽略未回复）。"""
