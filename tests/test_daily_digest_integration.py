@@ -60,6 +60,8 @@ def patched_config(tmp_path, monkeypatch):
     monkeypatch.setattr(cfg, "profiles", [PROFILE])
     monkeypatch.setattr(cfg.env, "sqlite_path", str(tmp_path / "test.sqlite3"))
     monkeypatch.setattr(cfg.env, "feishu_home_chat_id", "oc_test_chat")
+    # 隔离晨报缓存路径，避免测试写入真实 data/last_digest.json
+    monkeypatch.setattr(ddj, "_DIGEST_CACHE", tmp_path / "last_digest.json")
     return cfg
 
 

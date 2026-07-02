@@ -10,7 +10,8 @@ COPY config ./config
 RUN pip install --no-cache-dir -e .
 
 # SQLite / 缓存 / fastembed 模型持久化目录
-ENV TZ=Asia/Singapore \
+ENV PYTHONUNBUFFERED=1 \
+    TZ=Asia/Singapore \
     SQLITE_PATH=/app/data/research_agent.sqlite3 \
     CACHE_DIR=/app/data/cache \
     FASTEMBED_CACHE_PATH=/app/data/fastembed
