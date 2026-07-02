@@ -9,7 +9,7 @@
 | M1 | 本地 arXiv 晨报 dry-run | ✅ 已完成 |
 | M2 | 飞书发送（Hermes / webhook fallback + 卡片） | ✅ 已完成 |
 | M3 | 飞书群 @ 交互（解析/权限/会话/router + 各 flow） | ✅ 已完成 |
-| M4 | Lark CLI 论文库写入（飞书多维表格） | ⬜ 未开始（save 已可写本地 SQLite） |
+| M4 | 论文库写入飞书多维表格（lark_cli 安全 wrapper + base_writer + 二次确认 + 审计） | ✅ 已完成 |
 | M5 | 反馈学习模型 | ⬜ 未开始（feedback 表、命令与 feedback_adjustment 已就绪） |
 
 ## 模块映射

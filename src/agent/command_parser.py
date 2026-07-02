@@ -33,6 +33,7 @@ _SAVE_WORDS = ("保存", "加入论文库", "收藏", "存到", "存进")
 _SEARCH_WORDS = ("查一下", "查查", "搜一下", "搜索", "搜", "最近", "有什么新论文", "有什么论文", "找一下", "查")
 _UPDATE_WORDS = ("以后多关注", "多关注", "增加关键词", "关注一下", "加个方向", "加关键词")
 _HELP_WORDS = ("帮助", "help", "你能做什么", "怎么用", "使用说明", "指令")
+_CONFIRM_WORDS = ("确认", "确定", "是的", "可以", "yes", "ok")
 
 
 def strip_mention(text: str) -> str:
@@ -93,6 +94,16 @@ def parse_command(raw_text: str) -> CommandIntent:
             return intent("collision_check")
         # 默认对单篇进行总结
         return intent("summarize_paper")
+
+    # 二次确认（简短且以确认词开头，指代上一条待确认动作，避免误判长句）
+    if len(text) <= 6 and any(text.lower().startswith(w) for w in _CONFIRM_WORDS):
+        return intent("confirm")
+
+    # 无 ID 的保存/撞车：指代会话中最近处理过的一篇（router 用 session.last）
+    if _contains(text, _SAVE_WORDS):
+        return intent("save_paper")
+    if _contains(text, _COLLISION_WORDS):
+        return intent("collision_check")
 
     # 反馈（无 ID，指代上一篇）
     for words, ftype in _FEEDBACK_WORDS:

@@ -88,6 +88,7 @@ class CommandIntent(BaseModel):
         "save_paper",
         "feedback",
         "update_profile",
+        "confirm",
         "help",
         "unknown",
     ]

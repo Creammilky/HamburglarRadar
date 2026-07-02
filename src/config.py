@@ -119,6 +119,9 @@ class EnvSettings(BaseModel):
     # 飞书自建应用（长连接接入群聊 @ 交互）
     feishu_app_id: str = ""
     feishu_app_secret: str = ""
+    # 飞书多维表格（论文库，Milestone 4）
+    feishu_base_app_token: str = ""
+    feishu_base_table_id: str = ""
 
     lark_cli_bin: str = "lark"
     lark_cli_timeout_seconds: int = 20
@@ -132,6 +135,8 @@ class EnvSettings(BaseModel):
     llm_timeout_seconds: int = 60
     # 本地 embedding 后端（fastembed），当云端无 embedding 时使用；留空则不启用
     local_embedding_model: str = ""
+    # 命令理解模式：llm=工具调用 Agent（默认，需配置 LLM）；rule=关键词规则路由
+    agent_mode: str = "llm"
 
     arxiv_api_base: str = "https://export.arxiv.org/api/query"
     arxiv_request_delay_seconds: float = 3.0
@@ -189,6 +194,8 @@ def _load_env() -> EnvSettings:
         feishu_webhook_keyword=_get("FEISHU_WEBHOOK_KEYWORD"),
         feishu_app_id=_get("FEISHU_APP_ID"),
         feishu_app_secret=_get("FEISHU_APP_SECRET"),
+        feishu_base_app_token=_get("FEISHU_BASE_APP_TOKEN"),
+        feishu_base_table_id=_get("FEISHU_BASE_TABLE_ID"),
         lark_cli_bin=_get("LARK_CLI_BIN", "lark"),
         lark_cli_timeout_seconds=int(_get("LARK_CLI_TIMEOUT_SECONDS", "20") or 20),
         lark_cli_dry_run=_get("LARK_CLI_DRY_RUN", "false").lower() == "true",
@@ -199,6 +206,7 @@ def _load_env() -> EnvSettings:
         llm_embedding_model=_get("LLM_EMBEDDING_MODEL"),
         llm_timeout_seconds=int(_get("LLM_TIMEOUT_SECONDS", "60") or 60),
         local_embedding_model=_get("LOCAL_EMBEDDING_MODEL"),
+        agent_mode=_get("AGENT_MODE", "llm").lower(),
         arxiv_api_base=_get("ARXIV_API_BASE", "https://export.arxiv.org/api/query"),
         arxiv_request_delay_seconds=float(_get("ARXIV_REQUEST_DELAY_SECONDS", "3") or 3),
         arxiv_max_results_per_profile=int(_get("ARXIV_MAX_RESULTS_PER_PROFILE", "200") or 200),

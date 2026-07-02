@@ -42,6 +42,23 @@ def test_save_paper():
     assert c.arxiv_ids == ["2607.05678"]
 
 
+def test_save_without_link_uses_session():
+    c = parse_command("@小麦 把这几篇论文保存进论文库")
+    assert c.intent == "save_paper"
+    assert c.arxiv_ids == []
+
+
+def test_collision_without_link_uses_session():
+    c = parse_command("@小麦 这篇和我的方向撞车吗")
+    assert c.intent == "collision_check"
+    assert c.arxiv_ids == []
+
+
+def test_confirm_word():
+    assert parse_command("@小麦 确认").intent == "confirm"
+    assert parse_command("@小麦 确定保存").intent == "confirm"
+
+
 def test_feedback_irrelevant():
     c = parse_command("@小麦 今天这篇不相关")
     assert c.intent == "feedback"

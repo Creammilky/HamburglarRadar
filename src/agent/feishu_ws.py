@@ -89,9 +89,12 @@ def run_ws(config=None) -> None:
             # 1) 收到 → 稍等
             _set_stage(EMOJI_WAIT)
 
-            # 2) 耗时命令后台工作 → 正在输入
+            # 2) 耗时命令后台工作 → 正在输入（Agent 模式下除确认外都算耗时）
             intent = parse_command(event.text)
-            if intent.intent in _HEAVY_INTENTS:
+            heavy = intent.intent in _HEAVY_INTENTS or (
+                config.env.agent_mode == "llm" and intent.intent != "confirm"
+            )
+            if heavy:
                 _set_stage(EMOJI_WORKING)
 
             reply = router.route(event)

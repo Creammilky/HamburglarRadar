@@ -14,4 +14,8 @@ def _hermetic_env():
     env.llm_embedding_model = ""
     env.local_embedding_model = ""
     env.feishu_webhook_url = ""
+    env.feishu_app_id = ""
+    env.feishu_app_secret = ""
+    env.feishu_base_app_token = ""
+    env.feishu_base_table_id = ""
     yield

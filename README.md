@@ -9,7 +9,30 @@
 - **Milestone 1（已完成）**：本地 arXiv 晨报 dry-run。arXiv client、SQLite schema、关键词筛选、embedding 排序、LLM 摘要、`daily_digest_job --dry-run`。
 - **Milestone 2（已完成）**：飞书发送。Hermes send adapter + Feishu webhook fallback、card_renderer、`daily_digest_job --send`。
 - **Milestone 3（已完成）**：飞书群 `@` 交互。事件解析、command_parser、权限校验、会话、router，支持：今日论文 / 搜索主题 / 总结论文 / 撞车检查 / 反馈 / 保存 / 帮助。`python -m src.main serve` 或本地 `python -m src.main ask "..."`。
-- Milestone 4~5（未开始）：Lark CLI 论文库写入（飞书多维表格）、反馈学习模型。
+- **Milestone 4（已完成）**：论文库写入飞书多维表格。安全 allowlist wrapper（`lark_cli`，无 shell、审计）、Bitable 读写（`base_writer`，按 arxiv_id 查重后 add/update）、`保存`二次确认流。
+- Milestone 5（未开始）：反馈学习模型（feedback 表与 feedback_adjustment 已就绪，待纳入 reranker）。
+
+## LLM 工具调用 Agent（命令理解升级）
+
+默认 `AGENT_MODE=llm`：群里的自由表达先经 LLM Agent 理解，由它自主调用工具完成任务（可多步/多篇），
+再用中文汇总。工具即现有能力：`search_arxiv` / `summarize_paper` / `collision_check` / `daily_digest` /
+`record_feedback` / `request_save_paper`。**安全不变**：写操作（保存论文库）只登记待确认，用户回复「确认」后经
+allowlist + 审计通道落地；`确认` 走确定性快路径不交给 LLM。设 `AGENT_MODE=rule` 可回退纯关键词路由。
+
+**扩展工具**：在 `src/agent/tools.py` 里定义 `Tool(name, description, parameters, handler, writes)` 并
+`registry.register(...)` 即可，无需改动 harness。
+
+## 论文库（Milestone 4，写入飞书多维表格）
+
+1. 在飞书新建一个**多维表格**，从其 URL 取 `app_token`（形如 `bascn...` / `Xxxx`）。
+2. 给自建应用开通 **多维表格权限**（`bitable:app`）。
+3. 一键建表并拿到 `table_id`：
+   ```bash
+   python -m src.main base-init <app_token>
+   ```
+4. 把打印出的 `FEISHU_BASE_APP_TOKEN` / `FEISHU_BASE_TABLE_ID` 写入 `.env`。
+
+之后群里 `@机器人 把这篇保存到论文库 <arXiv链接>` → 机器人**先请求二次确认**，你回复「确认」后：先落本地 SQLite，再经 `lark_cli` 安全 wrapper 按 `arxiv_id` 查重、写入/更新多维表格（全程审计）。未配置多维表格时仅存本地并提示。
 
 ## Docker 部署（迁移友好）
 

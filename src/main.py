@@ -35,7 +35,21 @@ def main(argv: list[str] | None = None) -> int:
 
     sub.add_parser("ask", help="本地模拟一条群 @ 命令")
 
+    p_base = sub.add_parser("base-init", help="在指定飞书多维表格下创建论文库表并打印 table_id")
+    p_base.add_argument("app_token", help="多维表格 app_token（从多维表格 URL 获取）")
+    p_base.add_argument("--name", default="arXiv 论文库")
+
     args, rest = parser.parse_known_args(argv)
+
+    if args.command == "base-init":
+        from src.feishu.base_writer import FeishuBase
+
+        table_id = FeishuBase().create_paper_table(args.app_token, args.name)
+        print(f"已创建论文库表，table_id = {table_id}")
+        print("请把以下两行写入 .env：")
+        print(f"FEISHU_BASE_APP_TOKEN={args.app_token}")
+        print(f"FEISHU_BASE_TABLE_ID={table_id}")
+        return 0
 
     if args.command == "digest":
         forwarded = rest[:]

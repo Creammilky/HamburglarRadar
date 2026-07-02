@@ -73,6 +73,30 @@ class LlmClient:
             user = user + "\n\n上一次输出不是合法 JSON，请只输出严格 JSON。"
         raise LlmError("LLM did not return valid JSON")
 
+    def chat_messages(
+        self,
+        messages: list[dict],
+        tools: Optional[list[dict]] = None,
+        temperature: float = 0.3,
+    ) -> dict:
+        """底层多轮对话，支持 OpenAI 兼容的 tools/tool_calls。返回 assistant message dict。"""
+        if not self.chat_enabled:
+            raise LlmError("LLM chat not configured")
+        url = self.env.llm_base_url.rstrip("/") + "/chat/completions"
+        payload: dict = {
+            "model": self.env.llm_chat_model,
+            "messages": messages,
+            "temperature": temperature,
+        }
+        if tools:
+            payload["tools"] = tools
+            payload["tool_choice"] = "auto"
+        with httpx.Client(timeout=self.env.llm_timeout_seconds) as client:
+            resp = client.post(url, headers=self._headers(), json=payload)
+            resp.raise_for_status()
+            data = resp.json()
+        return data["choices"][0]["message"]
+
     def embed(self, texts: list[str]) -> list[list[float]]:
         if not self.embeddings_enabled:
             raise LlmError("LLM embeddings not configured")
