@@ -1,7 +1,9 @@
 app:
   name: "arxiv-feishu-research-agent"
+  # timezone 用于把时间换算为当地时间（IANA 名称，如 Asia/Singapore、America/New_York）
   timezone: "Asia/Singapore"
-  daily_digest_time: "08:30"
+  # 晨报提醒时间：支持 "HH:MM" 或四位数字 "HHMM"（如 "0830" 表示 08:30），按上面 timezone 解释
+  daily_digest_time: "0830"
   digest_lookback_hours: 24
   fetch_lookback_hours: 30
   max_papers_per_profile: 8

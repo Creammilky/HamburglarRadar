@@ -22,20 +22,29 @@ def run_daily_digest() -> None:
 
 def main() -> int:
     config = get_config()
-    hour, minute = config.app.daily_digest_time.split(":")
+    hour, minute = config.app.digest_hh_mm()
     scheduler = BlockingScheduler(timezone=config.app.timezone)
     scheduler.add_job(
         run_daily_digest,
         trigger="cron",
-        hour=int(hour),
-        minute=int(minute),
+        hour=hour,
+        minute=minute,
         timezone=config.app.timezone,
     )
     logger.info(
-        "调度器已启动：每天 %s (%s) 运行晨报",
-        config.app.daily_digest_time,
+        "调度器已启动：每天 %02d:%02d (%s) 运行晨报；授时来源=%s",
+        hour,
+        minute,
         config.app.timezone,
+        config.env.time_source,
     )
+    # 联网授时时，启动即打印当前校正后的时间，便于核对
+    if config.env.time_source != "system":
+        from zoneinfo import ZoneInfo
+
+        from src.timesource import now_local
+
+        logger.info("当前校正时间：%s", now_local(ZoneInfo(config.app.timezone)).isoformat())
     try:
         scheduler.start()
     except (KeyboardInterrupt, SystemExit):

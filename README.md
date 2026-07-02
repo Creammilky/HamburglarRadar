@@ -87,19 +87,39 @@ python -m src.scheduler.daily_digest_job --send
 python -m src.scheduler.daily_digest_job --send --profile llm_security_range
 ```
 
-### 定时任务
+### 定时任务与时间设置
 
-新加坡时间 08:30 == 00:30 UTC：
+在 `config/app.yml` 里设：
 
-```cron
-30 0 * * * cd /path/to/arxiv-feishu-research-agent && .venv/bin/python -m src.scheduler.daily_digest_job --send
+```yaml
+app:
+  timezone: "Asia/Singapore"   # IANA 时区，用于换算当地时间
+  daily_digest_time: "0830"    # 支持 "HH:MM" 或四位 "HHMM"
 ```
 
-或使用内置 APScheduler：
+内置 APScheduler（按上面配置，自动换算时区）：
 
 ```bash
 python -m src.scheduler.cron
 ```
+
+或系统 cron（新加坡 08:30 == 00:30 UTC）：
+
+```cron
+30 0 * * * cd /path/to/HamburglarRadar && .venv/bin/python -m src.scheduler.daily_digest_job --send
+```
+
+#### 授时来源（应对服务器时钟不准）
+
+默认用系统时钟。可在 `.env` 切换为联网授时来校正**晨报时间窗口**：
+
+```ini
+TIME_SOURCE=http     # system(默认) | http(读HTTPS的Date头，无需额外依赖) | ntp(需 pip install ntplib)
+NTP_SERVER=pool.ntp.org
+TIME_HTTP_URL=https://www.cloudflare.com
+```
+
+> 说明：APScheduler 的触发时刻仍依系统时钟，联网授时用于校正“过去 24 小时”窗口的计算。若要触发时刻也精确，建议在服务器启用 NTP 守护进程（`chrony` / `systemd-timesyncd`）。
 
 ## LLM 与 Embedding 后端
 

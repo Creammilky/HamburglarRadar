@@ -23,6 +23,23 @@ class AppSettings(BaseModel):
     timezone: str = "Asia/Singapore"
     daily_digest_time: str = "08:30"
     digest_lookback_hours: int = 24
+
+    def digest_hh_mm(self) -> tuple[int, int]:
+        """解析晨报时间，支持 'HH:MM'、四位 'HHMM'、三位 'HMM'。"""
+        s = str(self.daily_digest_time).strip().replace("：", ":")
+        if ":" in s:
+            parts = s.split(":")
+            hh, mm = parts[0], (parts[1] if len(parts) > 1 else "0")
+        elif s.isdigit() and len(s) == 4:
+            hh, mm = s[:2], s[2:]
+        elif s.isdigit() and len(s) == 3:
+            hh, mm = s[:1], s[1:]
+        else:
+            hh, mm = (s or "8"), "0"
+        hour, minute = int(hh), int(mm)
+        if not (0 <= hour <= 23 and 0 <= minute <= 59):
+            raise ValueError(f"非法的 daily_digest_time: {self.daily_digest_time}")
+        return hour, minute
     fetch_lookback_hours: int = 30
     max_papers_per_profile: int = 8
     max_total_papers_per_digest: int = 20
@@ -84,6 +101,11 @@ class EnvSettings(BaseModel):
     app_env: str = "local"
     tz: str = "Asia/Singapore"
     log_level: str = "INFO"
+
+    # 授时来源：system=系统时钟；http=读 HTTPS 响应的 Date 头；ntp=NTP 服务器
+    time_source: str = "system"
+    ntp_server: str = "pool.ntp.org"
+    time_http_url: str = "https://www.cloudflare.com"
 
     hermes_base_url: str = "http://127.0.0.1:18789"
     hermes_agent_name: str = "arxiv-research-agent"
@@ -154,6 +176,9 @@ def _load_env() -> EnvSettings:
         app_env=_get("APP_ENV", "local"),
         tz=_get("TZ", "Asia/Singapore"),
         log_level=_get("LOG_LEVEL", "INFO"),
+        time_source=_get("TIME_SOURCE", "system").lower(),
+        ntp_server=_get("NTP_SERVER", "pool.ntp.org"),
+        time_http_url=_get("TIME_HTTP_URL", "https://www.cloudflare.com"),
         hermes_base_url=_get("HERMES_BASE_URL", "http://127.0.0.1:18789"),
         hermes_agent_name=_get("HERMES_AGENT_NAME", "arxiv-research-agent"),
         feishu_home_chat_id=_get("FEISHU_HOME_CHAT_ID"),

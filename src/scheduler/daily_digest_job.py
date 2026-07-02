@@ -121,7 +121,9 @@ class DailyDigest:
         self.debug_ranked: dict[str, list[RankedPaper]] = {}
 
     def _windows(self) -> tuple[datetime, datetime, datetime]:
-        now = datetime.now(self.tz)
+        from src.timesource import now_local
+
+        now = now_local(self.tz)
         fetch_start = now - timedelta(hours=self.config.app.fetch_lookback_hours)
         display_start = now - timedelta(hours=self.config.app.digest_lookback_hours)
         return now, fetch_start, display_start
