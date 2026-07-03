@@ -9,8 +9,11 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 import time
 from datetime import datetime
+from pathlib import Path
 from typing import Optional
 
 import feedparser
@@ -18,7 +21,7 @@ import httpx
 
 from src.arxiv.normalizer import normalize_entry
 from src.arxiv.query_builder import build_query
-from src.config import get_config
+from src.config import REPO_ROOT, get_config
 from src.models import ArxivPaper
 from src.observability.logger import get_logger
 
@@ -49,6 +52,43 @@ class ArxivClient:
         )
         self.timeout_seconds = timeout_seconds
         self._last_request_ts = 0.0
+        self.cache_ttl = cfg.arxiv_cache_ttl_seconds
+        cache_dir = Path(cfg.cache_dir)
+        if not cache_dir.is_absolute():
+            cache_dir = REPO_ROOT / cache_dir
+        self._cache_dir = cache_dir / "arxiv"
+
+    # ---- 抓取缓存（减少 arXiv 请求 / 防限流封禁） ----
+    def _cache_path(self, key: str) -> Path:
+        h = hashlib.sha256(key.encode("utf-8")).hexdigest()[:16]
+        return self._cache_dir / f"{h}.json"
+
+    def _cache_get(self, key: str) -> Optional[str]:
+        if self.cache_ttl <= 0:
+            return None
+        path = self._cache_path(key)
+        if not path.exists():
+            return None
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+            if time.time() - float(data.get("ts", 0)) <= self.cache_ttl:
+                logger.info("arXiv 命中缓存：%s", key)
+                return data.get("text")
+        except Exception:  # noqa: BLE001
+            return None
+        return None
+
+    def _cache_put(self, key: str, text: str) -> None:
+        if self.cache_ttl <= 0:
+            return
+        try:
+            self._cache_dir.mkdir(parents=True, exist_ok=True)
+            self._cache_path(key).write_text(
+                json.dumps({"ts": time.time(), "key": key, "text": text}, ensure_ascii=False),
+                encoding="utf-8",
+            )
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("写 arXiv 缓存失败：%s", exc)
 
     def _respect_delay(self) -> None:
         elapsed = time.time() - self._last_request_ts
@@ -103,15 +143,26 @@ class ArxivClient:
             )
         return [normalize_entry(dict(e)) for e in parsed.entries]
 
-    def search(self, query: str, max_results: Optional[int] = None) -> list[ArxivPaper]:
+    def search(
+        self,
+        query: str,
+        max_results: Optional[int] = None,
+        cache_key: Optional[str] = None,
+    ) -> list[ArxivPaper]:
+        n = max_results or self.max_results_per_profile
+        key = cache_key or f"q:{query}:{n}"
+        cached = self._cache_get(key)
+        if cached is not None:
+            return self.parse_feed(cached)
         params = {
             "search_query": query,
             "start": 0,
-            "max_results": max_results or self.max_results_per_profile,
+            "max_results": n,
             "sortBy": "submittedDate",
             "sortOrder": "descending",
         }
         feed_text = self._raw_request(params)
+        self._cache_put(key, feed_text)
         return self.parse_feed(feed_text)
 
     def fetch_window(
@@ -123,9 +174,17 @@ class ArxivClient:
     ) -> list[ArxivPaper]:
         query = build_query(categories, window_start, window_end)
         logger.info("arXiv query: %s", query)
-        return self.search(query, max_results=max_results)
+        n = max_results or self.max_results_per_profile
+        # 缓存键按分类粗粒度（忽略精确到分钟的窗口），使短期内重复运行复用、每天则取新
+        cache_key = f"win:{'|'.join(sorted(categories))}:{n}"
+        return self.search(query, max_results=max_results, cache_key=cache_key)
 
     def fetch_by_ids(self, arxiv_ids: list[str]) -> list[ArxivPaper]:
+        key = f"ids:{','.join(sorted(arxiv_ids))}"
+        cached = self._cache_get(key)
+        if cached is not None:
+            return self.parse_feed(cached)
         params = {"id_list": ",".join(arxiv_ids), "max_results": len(arxiv_ids)}
         feed_text = self._raw_request(params)
+        self._cache_put(key, feed_text)
         return self.parse_feed(feed_text)

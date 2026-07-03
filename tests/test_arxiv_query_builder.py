@@ -39,6 +39,44 @@ def test_extract_arxiv_id_from_url():
     assert extract_arxiv_id_from_url("not a paper") is None
 
 
+def test_fetch_cache_avoids_second_http(tmp_path, monkeypatch):
+    from pathlib import Path
+
+    fixture = Path(__file__).parent / "fixtures" / "arxiv_feed_sample.xml"
+    feed = fixture.read_text(encoding="utf-8")
+
+    client = ArxivClient()
+    client._cache_dir = tmp_path / "arxiv"  # 隔离缓存目录
+    client.cache_ttl = 3600
+
+    calls = {"n": 0}
+
+    def fake_raw(params):
+        calls["n"] += 1
+        return feed
+
+    monkeypatch.setattr(client, "_raw_request", fake_raw)
+
+    r1 = client.search("all:test", max_results=5)
+    r2 = client.search("all:test", max_results=5)  # 应命中缓存
+    assert len(r1) == 2 and len(r2) == 2
+    assert calls["n"] == 1  # 只请求了一次，第二次走缓存
+
+
+def test_cache_disabled_when_ttl_zero(tmp_path, monkeypatch):
+    from pathlib import Path
+
+    feed = (Path(__file__).parent / "fixtures" / "arxiv_feed_sample.xml").read_text(encoding="utf-8")
+    client = ArxivClient()
+    client._cache_dir = tmp_path / "arxiv"
+    client.cache_ttl = 0
+    calls = {"n": 0}
+    monkeypatch.setattr(client, "_raw_request", lambda p: (calls.__setitem__("n", calls["n"] + 1) or feed))
+    client.search("all:x", max_results=5)
+    client.search("all:x", max_results=5)
+    assert calls["n"] == 2  # 关闭缓存 → 每次都请求
+
+
 def test_parse_feed_fixture(tmp_path):
     from pathlib import Path
 

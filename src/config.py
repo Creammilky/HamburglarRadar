@@ -141,6 +141,8 @@ class EnvSettings(BaseModel):
     arxiv_api_base: str = "https://export.arxiv.org/api/query"
     arxiv_request_delay_seconds: float = 3.0
     arxiv_max_results_per_profile: int = 200
+    # 抓取结果缓存 TTL（秒）：同一窗口/相同搜索在 TTL 内复用，减少 arXiv 请求，默认 6 小时
+    arxiv_cache_ttl_seconds: int = 21600
 
     sqlite_path: str = "./data/research_agent.sqlite3"
     cache_dir: str = "./data/cache"
@@ -210,6 +212,7 @@ def _load_env() -> EnvSettings:
         arxiv_api_base=_get("ARXIV_API_BASE", "https://export.arxiv.org/api/query"),
         arxiv_request_delay_seconds=float(_get("ARXIV_REQUEST_DELAY_SECONDS", "3") or 3),
         arxiv_max_results_per_profile=int(_get("ARXIV_MAX_RESULTS_PER_PROFILE", "200") or 200),
+        arxiv_cache_ttl_seconds=int(_get("ARXIV_CACHE_TTL_SECONDS", "21600") or 21600),
         sqlite_path=_get("SQLITE_PATH", "./data/research_agent.sqlite3"),
         cache_dir=_get("CACHE_DIR", "./data/cache"),
     )

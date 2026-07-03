@@ -8,10 +8,9 @@ services:
       - ./data:/app/data
     restart: unless-stopped
     labels:
-      # 由 scheduler(ofelia) 调度，时间为 UTC。临时测试：10:15 SGT == 02:15 UTC
-      # 正式请改回 "0 30 0 * * *"（08:30 SGT）
+      # 由 scheduler(ofelia) 调度，时间为 UTC：00:30 UTC == 新加坡 08:30
       ofelia.enabled: "true"
-      ofelia.job-exec.daily-digest.schedule: "0 15 2 * * *"
+      ofelia.job-exec.daily-digest.schedule: "0 30 0 * * *"
       ofelia.job-exec.daily-digest.command: "python -m src.scheduler.daily_digest_job --send"
 
   # 轻量容器内 cron 调度器（在 agent 容器里 exec 晨报命令，复用其 .env 与卷）
