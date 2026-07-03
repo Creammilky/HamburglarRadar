@@ -89,6 +89,19 @@ def _parse_paper_time(value: Optional[str]) -> Optional[datetime]:
         return None
 
 
+_ACTION_RANK = {"must_read": 0, "skim": 1, "archive": 2, "skip": 3}
+_COLLISION_RANK = {"high": 0, "medium": 1, "low": 2, "unknown": 3}
+
+
+def _digest_item_sort_key(item: DigestItem) -> tuple:
+    """晨报展示排序键：必读优先 → 撞车风险高优先 → final_score 高优先。"""
+    return (
+        _ACTION_RANK.get(item.summary.recommended_action, 9),
+        _COLLISION_RANK.get(item.summary.collision_risk, 9),
+        -item.score.final_score,
+    )
+
+
 def _dedup_by_base(papers: list[ArxivPaper]) -> list[ArxivPaper]:
     """按 arxiv_id_base 去重，保留最高版本（None 视为最高，因指定版本抓取才带版本）。"""
     best: dict[str, ArxivPaper] = {}
@@ -175,6 +188,9 @@ class DailyDigest:
             items.append(DigestItem(paper=rp.paper, score=rp.score, summary=summary))
             if not self.dry_run:
                 self._persist_item(rp, summary, run_id, profile.id, chat_id)
+
+        # 展示排序：必读优先，其次撞车风险高优先，再按分数（重要的排前面）
+        items.sort(key=_digest_item_sort_key)
 
         metrics.selected_count += len(items)
         metrics.per_profile_selected[profile.id] = len(items)

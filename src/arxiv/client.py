@@ -58,7 +58,8 @@ class ArxivClient:
     def _raw_request(self, params: dict) -> str:
         """执行带重试的 HTTP GET，返回响应文本。"""
         last_error: Optional[Exception] = None
-        for attempt in range(3):
+        max_attempts = 5
+        for attempt in range(max_attempts):
             self._respect_delay()
             try:
                 with httpx.Client(timeout=self.timeout_seconds) as client:
@@ -68,15 +69,29 @@ class ArxivClient:
                     return resp.text
             except Exception as exc:  # noqa: BLE001 - 统一重试
                 last_error = exc
-                backoff = 2**attempt
+                # 429（限流）需更有耐心：尊重 Retry-After，否则较长线性退避
+                status = getattr(getattr(exc, "response", None), "status_code", None)
+                if status == 429:
+                    retry_after = getattr(exc, "response", None).headers.get("Retry-After") if getattr(exc, "response", None) else None
+                    try:
+                        backoff = int(retry_after) if retry_after else 20 * (attempt + 1)
+                    except (TypeError, ValueError):
+                        backoff = 20 * (attempt + 1)
+                else:
+                    backoff = 2**attempt
                 logger.warning(
-                    "arXiv request failed (attempt %d/3): %s; backoff %ds",
+                    "arXiv request failed (attempt %d/%d, status=%s): %s; backoff %ds",
                     attempt + 1,
+                    max_attempts,
+                    status,
                     exc,
                     backoff,
                 )
+                self._last_request_ts = time.time()  # 退避也算入限速基准
                 time.sleep(backoff)
-        raise ArxivClientError(f"arXiv request failed after 3 retries: {last_error}")
+        raise ArxivClientError(
+            f"arXiv request failed after {max_attempts} retries: {last_error}"
+        )
 
     @staticmethod
     def parse_feed(feed_text: str) -> list[ArxivPaper]:
