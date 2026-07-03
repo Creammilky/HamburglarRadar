@@ -45,6 +45,21 @@ class MessageSender:
         self.config = config or get_config()
         self.dry_run = dry_run
         self._hermes = HermesAdapter(self.config)
+        self._app = None
+
+    def _send_app(self, chat_id: str, card: dict) -> SendResult:
+        """通过飞书自建应用消息 API 发送（推荐主通道）。"""
+        from src.feishu.app_client import FeishuAppClient
+
+        if self._app is None:
+            self._app = FeishuAppClient(self.config)
+        try:
+            res = self._app.send_card(chat_id, card)
+            if res.get("ok"):
+                return SendResult(ok=True, channel="app", detail="sent")
+            return SendResult(ok=False, channel="app", detail=str(res))
+        except Exception as exc:  # noqa: BLE001
+            return SendResult(ok=False, channel="app", detail=str(exc))
 
     @staticmethod
     def _inject_keyword(card: dict, keyword: str) -> dict:
@@ -114,28 +129,33 @@ class MessageSender:
             logger.info("[dry-run] 不实际发送飞书，chat_id=%s", chat_id or "(未配置)")
             return SendResult(ok=True, channel="dry_run", detail="not sent")
 
-        if not chat_id and self.config.feishu.sender == "hermes":
-            logger.warning("home chat_id 未配置，尝试 webhook fallback")
+        env = self.config.env
+        details: list[str] = []
 
-        result = SendResult(ok=False, channel="none", detail="no channel")
-        # 优先 Hermes（需要 chat_id）
+        # 1) 优先：飞书自建应用（需 app 凭据 + chat_id）——最稳的主通道
+        if env.feishu_app_id and env.feishu_app_secret and chat_id:
+            app_res = self._send_app(chat_id, card)
+            if app_res.ok:
+                return app_res
+            details.append(f"app={app_res.detail}")
+            logger.warning("App 发送失败：%s，尝试其它通道", app_res.detail)
+
+        # 2) Hermes（需要 chat_id）
         if self.config.feishu.sender == "hermes" and chat_id:
-            result = self._send_hermes(chat_id, card)
-            if result.ok:
-                return result
-            logger.warning("Hermes 发送失败：%s，尝试 webhook fallback", result.detail)
+            hermes_res = self._send_hermes(chat_id, card)
+            if hermes_res.ok:
+                return hermes_res
+            details.append(f"hermes={hermes_res.detail}")
 
-        # webhook fallback
+        # 3) 自定义机器人 webhook 兜底
         wh = self._send_webhook(card, text)
         if wh.ok:
             return wh
+        details.append(f"webhook={wh.detail}")
 
         # 都失败：保存到本地，不丢数据
         saved = self._save_failed(chat_id, card, text)
         logger.error("飞书发送失败，已保存到 %s", saved)
         return SendResult(
-            ok=False,
-            channel="failed",
-            detail=f"hermes={result.detail}; webhook={wh.detail}",
-            saved_path=saved,
+            ok=False, channel="failed", detail="; ".join(details), saved_path=saved
         )
